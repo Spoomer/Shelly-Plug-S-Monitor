@@ -16,11 +16,15 @@ async fn main() -> Result<(), std::io::Error> {
         }
     }
 
-    let mut bind = ("127.0.0.1", 8080);
+    let bind: (String, u16);
     if let Some(p) = port {
         if let Ok(port) = p.parse::<u16>() {
-            bind.1 = port;
+            bind = (String::from("127.0.0.1"), port);
+        } else {
+            bind = (String::from("127.0.0.1"), 8080);
         }
+    } else {
+        bind = (String::from("127.0.0.1"), 8080);
     }
     println!("starting server at http://{}:{}", &bind.0, &bind.1);
     HttpServer::new(|| {
@@ -40,6 +44,7 @@ async fn main() -> Result<(), std::io::Error> {
     .run()
     .await
 }
+
 async fn proxy_api_call() -> impl Responder {
     let mut request_result = minreq::get("http://192.168.178.55/meter/0");
     if env::var("AUTH").is_ok() {
