@@ -1,6 +1,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
+import { Translator } from "../translator.js";
 function Shelly() {
   async function fetchApi() {
     return await fetch("http://localhost:8080/api/shelly").then((res) => {
@@ -9,6 +10,7 @@ function Shelly() {
       } else return "";
     });
   }
+  //const translator = new Translator("en");
   const timestamp = new Date().getTime();
   //json
   const [currentJson, setJson] = useState(JSON.parse("{}"));
@@ -23,9 +25,9 @@ function Shelly() {
     yaxis: {
       title: { text: "Ws" },
     },
-    tooltip:{
-      x:{format:'dd.MM.yyyy HH.mm.ss'}
-    }
+    tooltip: {
+      x: { format: "dd.MM.yyyy HH.mm.ss" },
+    },
   });
   //chart-series
   const [series, setSeries] = useState([
@@ -69,7 +71,9 @@ function Shelly() {
           {round(currentJson.total / 60000, 3)}
           {" kWh"}
         </p>
-        <p>Total Energy since refreshing the page: {round(energy, 3) + " Ws"}</p>
+        <p>
+          Total Energy since refreshing the page: {round(energy, 3) + " Ws"}
+        </p>
         <p>Timestamp: {date.toUTCString()} </p>
         <Chart options={options} series={series} type="line" height="300" />
       </div>
