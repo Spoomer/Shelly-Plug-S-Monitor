@@ -33,9 +33,9 @@ async fn main() -> Result<(), std::io::Error> {
             .route("/api/shelly", web::to(proxy_api_call))
             .service(
                 spa()
-                    .index_file("./frontend/build/index.html")
-                    .static_resources_mount("/static")
-                    .static_resources_location("frontend/build/static/")
+                    .index_file("./frontendvue/shelly-plug-s/dist/index.html")
+                    //.static_resources_mount("/static")
+                    .static_resources_location("./frontendvue/shelly-plug-s/dist")
                     .finish(),
             )
     })
