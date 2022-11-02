@@ -13,7 +13,7 @@ const state = reactive({
     energy: 0,
     date:new Date()
 })
-
+const preferDarkmode = window.matchMedia("(prefers-color-scheme:dark)").matches;
 const options = {
     chart: {
         id: "energylinechart",
@@ -27,6 +27,9 @@ const options = {
     tooltip: {
         x: { format: "dd.MM.yyyy HH.mm.ss" },
     },
+    theme: {
+        mode : preferDarkmode ? 'dark' : 'light',
+    }
 }
 async function fetchApi() {
     return await fetch("http://127.0.0.1:8080/api/shelly").then((res) => {
@@ -75,9 +78,3 @@ const interval = setInterval(() => {
     </div>
     <apexchart :options="options" :series="state.series" type="line" height="300" />
 </template>
-
-<style scoped>
-#shelly {
-    flex: auto;
-}
-</style>
