@@ -2,6 +2,13 @@
 import { reactive } from 'vue'
 
 const dataArr : any[] = [];
+const pricePerKwhCache = Number.parseFloat(localStorage.getItem("pricePerKwh") ?? "0");
+function changepricePerKwh(event : Event){
+    pricePerKwh = Number.parseFloat((event.target as HTMLInputElement)?.value ?? 0);
+    localStorage.setItem("pricePerKwh",pricePerKwh.toString())
+}
+let pricePerKwh = pricePerKwhCache;
+
 const state = reactive({
     currentJson: JSON.parse("{}"),
     series: [
@@ -11,8 +18,9 @@ const state = reactive({
         },
     ],
     energy: 0,
-    date:new Date()
+    date:new Date(),
 })
+
 const preferDarkmode = window.matchMedia("(prefers-color-scheme:dark)").matches;
 const options = {
     chart: {
@@ -74,6 +82,9 @@ const interval = setInterval(() => {
         <p>
             Total Energy since refreshing the page: {{ round(state.energy, 3) + " Ws" }}
         </p>
+        <p><input type="number" step="0.01" id="inputPricePerKwh" :value="pricePerKwh" @change="changepricePerKwh" > Money per kWh</p>
+        <p>Cost since Reload: {{round(pricePerKwh * state.energy / 3600000,2)}}</p>
+        <p>Cost since plug in: {{round(pricePerKwh * state.currentJson.total / 60000,2)}}</p>
         <p>Timestamp: {{ state.date.toUTCString() }} </p>
     </div>
     <apexchart :options="options" :series="state.series" type="line" height="300" />
