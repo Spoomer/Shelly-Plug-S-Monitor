@@ -46,22 +46,27 @@ async fn main() -> Result<(), std::io::Error> {
 }
 
 async fn proxy_api_call() -> impl Responder {
+    match get_from_shelly_plug_s() {
+        Ok(json) => return HttpResponse::Ok().body(MessageBody::boxed(json.to_owned())),
+        Err(err) => {
+            return HttpResponse::BadRequest().body(MessageBody::boxed(err.to_string().to_owned()))
+        }
+    }
+}
+
+fn get_from_shelly_plug_s() -> Result<String, Box<dyn std::error::Error>> {
     let mut request_result = minreq::get("http://192.168.178.55/meter/0");
     if env::var("AUTH").is_ok() {
         request_result = request_result.with_header(
             "Authorization",
             format!("Basic {}", env::var("AUTH").unwrap()),
-        )
+        );
     }
-    if let Ok(response) = request_result.send() {
-        match response.as_str() {
-            Ok(json) => return HttpResponse::Ok().body(MessageBody::boxed(json.to_owned())),
-            Err(err) => {
-                return HttpResponse::BadRequest()
-                    .body(MessageBody::boxed(err.to_string().to_owned()))
-            }
+    let response = request_result.send()?;
+    match response.as_str() {
+        Ok(json) => return Ok(json.to_owned()),
+        Err(err) => {
+            return Err(Box::new(err));
         }
-    } else {
-        return HttpResponse::BadRequest().finish();
     }
 }
