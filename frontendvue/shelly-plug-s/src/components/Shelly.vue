@@ -74,7 +74,7 @@ const interval = setInterval(() => {
             {{ " kWh" }}
         </p>
         <p>
-            Total Energy since plug in: {{ state.currentJson.total }}
+            Total Energy since plug in or restart: {{ state.currentJson.total }}
             {{ " Wm or " }}
             {{ round(state.currentJson.total / 60000, 3) }}
             {{ " kWh" }}
