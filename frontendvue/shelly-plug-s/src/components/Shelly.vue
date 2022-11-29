@@ -69,7 +69,7 @@ const interval = setInterval(() => {
     <div id="shelly">
         <p>Current Power: {{ state.currentJson.power }} W</p>
         <p>
-            Last measured Energy (1min): {{ state.currentJson.counters[0] + " Wm or " }}
+            Last measured Energy ({{ state.date.toUTCString() }}): {{ state.currentJson.counters[0] + " Wm or " }}
             {{ round(state.currentJson.counters[0] / 60000, 6) }}
             {{ " kWh" }}
         </p>
@@ -85,7 +85,6 @@ const interval = setInterval(() => {
         <p><input type="number" step="0.01" id="inputPricePerKwh" :value="pricePerKwh" @change="changepricePerKwh" > Money per kWh</p>
         <p>Cost since Reload: {{round(pricePerKwh * state.energy / 3600000,2)}}</p>
         <p>Cost since plug in: {{round(pricePerKwh * state.currentJson.total / 60000,2)}}</p>
-        <p>Timestamp: {{ state.date.toUTCString() }} </p>
     </div>
     <apexchart :options="options" :series="state.series" type="line" height="300" />
 </template>
