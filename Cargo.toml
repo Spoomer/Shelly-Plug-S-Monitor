@@ -9,3 +9,4 @@ edition = "2021"
 actix-web = "4"
 actix-web-lab = "0.18.5"
 minreq = "2.6.0"
+rusqlite = { version = "0.28.0", features = ["bundled"] }

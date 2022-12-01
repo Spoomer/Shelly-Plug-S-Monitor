@@ -1,8 +1,8 @@
-use actix_web::{
-    body::MessageBody, middleware::Logger, web, App, HttpResponse, HttpServer, Responder,
-};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use actix_web_lab::web::spa;
-use std::env;
+use shelly_web::{proxy_api_call, RunOptions};
+
+use std::{env, thread};
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -10,27 +10,36 @@ async fn main() -> Result<(), std::io::Error> {
     //ignore first argument: executable name
     args.next();
     let mut port: Option<String> = None;
+    let mut archive: Option<String> = None;
+    let mut authentication: Option<String> = None;
+
+    //Env
+    if let Ok(auth) = env::var("AUTH") {
+        authentication = Some(auth);
+    }
+    // args overwrite Env
     while let Some(arg) = args.next() {
-        if arg == "-port" || arg == "-p" {
+        if arg == "--port" || arg == "-p" {
             port = args.next();
+        } else if arg == "--archive" || arg == "-a" {
+            archive = args.next();
+        } else if arg == "--auth" {
+            authentication = args.next();
         }
+    }
+    let options: RunOptions = RunOptions::new(port, archive, authentication);
+    let bind: (String, u16) = (String::from("127.0.0.1"), options.port);
+    let cancel = false;
+    if let Some(storage_size) = options.archive {
+        thread::spawn(move || shelly_web::archive_data(storage_size, &cancel));
     }
 
-    let bind: (String, u16);
-    if let Some(p) = port {
-        if let Ok(port) = p.parse::<u16>() {
-            bind = (String::from("127.0.0.1"), port);
-        } else {
-            bind = (String::from("127.0.0.1"), 8080);
-        }
-    } else {
-        bind = (String::from("127.0.0.1"), 8080);
-    }
     println!("starting server at http://{}:{}", &bind.0, &bind.1);
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
             .wrap(Logger::default().log_target("@"))
-            .route("/api/shelly", web::to(proxy_api_call))
+            .app_data(web::Data::new(options.clone()))
+            .service(web::scope("/api").route("/shelly", web::to(proxy_api_call)))
             .service(
                 spa()
                     .index_file("./frontendvue/shelly-plug-s/dist/index.html")
@@ -43,30 +52,4 @@ async fn main() -> Result<(), std::io::Error> {
     .bind(bind)?
     .run()
     .await
-}
-
-async fn proxy_api_call() -> impl Responder {
-    match get_from_shelly_plug_s() {
-        Ok(json) => return HttpResponse::Ok().body(MessageBody::boxed(json.to_owned())),
-        Err(err) => {
-            return HttpResponse::BadRequest().body(MessageBody::boxed(err.to_string().to_owned()))
-        }
-    }
-}
-
-fn get_from_shelly_plug_s() -> Result<String, Box<dyn std::error::Error>> {
-    let mut request_result = minreq::get("http://192.168.178.55/meter/0");
-    if env::var("AUTH").is_ok() {
-        request_result = request_result.with_header(
-            "Authorization",
-            format!("Basic {}", env::var("AUTH").unwrap()),
-        );
-    }
-    let response = request_result.send()?;
-    match response.as_str() {
-        Ok(json) => return Ok(json.to_owned()),
-        Err(err) => {
-            return Err(Box::new(err));
-        }
-    }
 }
