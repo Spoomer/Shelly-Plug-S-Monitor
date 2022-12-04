@@ -14,7 +14,7 @@ async fn main() -> Result<(), std::io::Error> {
     if let Some(storage_size) = options.archive {
         let cloned_options = options.clone();
         thread::spawn(
-            move || archive::archive_data(archive::init_archive(Some("./archive.db")), storage_size, &cloned_options, &cancel));
+            move || archive::archive_data(archive::init_archive(Some("./archive.db")),"./archive.db", storage_size, &cloned_options, &cancel));
     }
 
     println!("starting server at http://{}:{}", &bind.0, &bind.1);

@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::time::SystemTime;
 
 use crate::options::RunOptions;
@@ -33,6 +32,7 @@ enum EnergyUnit {
 
 pub fn archive_data(
     connection: rusqlite::Connection,
+    archive_path: &str,
     storage_size: usize,
     runoptions: &RunOptions,
     cancel: &bool,
@@ -41,32 +41,46 @@ pub fn archive_data(
     while !cancel {
         if let Ok(elapsed) = last.elapsed() {
             if elapsed.as_secs() >= 60 {
-                make_entry(&connection, runoptions);
-                last = SystemTime::now();
+                match make_entry(&connection, runoptions) {
+                    Ok(()) => last = SystemTime::now(),
+                    Err(_) => (),
+                }
+            }
+        }
+        if storage_size != 0 {
+            if let Ok(metadata) = std::fs::metadata(archive_path) {
+                if metadata.len() > storage_size as u64 {
+                    remove_old_entries(&connection);
+                }
             }
         }
         std::thread::sleep(std::time::Duration::from_secs(1))
     }
 }
 
-fn make_entry(connection: &rusqlite::Connection, runoptions: &RunOptions) {
-    if let Ok(json) = shelly_api::get_from_shelly_plug_s(runoptions) {
-        if let Ok(meter) = serde_json::from_str::<ShellyPlugSMeter>(&json) {
-            //check for entry
-            if let Ok(mut rows) = connection.prepare("SELECT Count(*) from Archive WHERE plug_id = ?1 AND timestamp = ?2;").unwrap()
-            .query((1, &meter.timestamp)) {
-                if let Ok(Some(row)) = rows.next() {
-                    if let Ok(count) = row.get::<usize, u8>(0) {
-                        if count == 0 {
-                            //write entry
-                            connection.execute("INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) \
-                            Values(?1,1,?2,?3,?4,?5,?6)", (meter.timestamp, (meter.power * 1000.0) as u32, PowerUnit::Milliwatt as u8, (meter.counters[0] * 1000.0) as u32, EnergyUnit::MiliwattMinute as u8, meter.total * 1000)).expect("Failed");
-                        }
-                    }
-                }
-            }
+fn remove_old_entries(connection: &rusqlite::Connection) {
+    _ = connection.execute("DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT Top(5) id FROM mytable ORDER BY timestamp ASC) ", [1]);
+}
+
+fn make_entry(
+    connection: &rusqlite::Connection,
+    runoptions: &RunOptions,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let json = shelly_api::get_from_shelly_plug_s(runoptions)?;
+    let meter = serde_json::from_str::<ShellyPlugSMeter>(&json)?;
+    //check for entry
+    let mut statement = connection
+        .prepare("SELECT Count(*) from Archive WHERE plug_id = ?1 AND timestamp = ?2;")?;
+    let mut rows = statement.query((1, &meter.timestamp))?;
+    if let Some(row) = rows.next()? {
+        let count = row.get::<usize, u8>(0)?;
+        if count == 0 {
+            //write entry
+            connection.execute("INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6)",
+            (meter.timestamp, (meter.power * 1000.0) as u32, PowerUnit::Milliwatt as u8, (meter.counters[0] * 1000.0) as u32, EnergyUnit::MiliwattMinute as u8, meter.total * 1000))?;
         }
     }
+    Ok(())
 }
 
 pub fn init_archive(archive_path: Option<&str>) -> rusqlite::Connection {
