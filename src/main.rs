@@ -1,20 +1,32 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use actix_web_lab::web::spa;
 
-use std::{env, thread};
-use shelly_web::{routes, options, archive};
 use shelly_web::options::RunOptions;
+use shelly_web::{archive, options, routes};
+use std::{env, thread};
 
 #[actix_web::main]
-async fn main() -> Result<(), std::io::Error> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = get_run_options();
     let bind: (String, u16) = (String::from("127.0.0.1"), options.port);
     let cancel = false;
-    
+
     if let Some(storage_size) = options.archive {
         let cloned_options = options.clone();
-        thread::spawn(
-            move || archive::archive_data(archive::init_archive(Some("./archive.db")),"./archive.db", storage_size, &cloned_options, &cancel));
+        match archive::init_archive(Some("./archive.db")) {
+            Ok(connection) => {
+                thread::spawn(move || {
+                    archive::archive_service(
+                        connection,
+                        "./archive.db",
+                        storage_size,
+                        &cloned_options,
+                        &cancel,
+                    )
+                });
+            }
+            Err(err) => return Err(err),
+        }
     }
 
     println!("starting server at http://{}:{}", &bind.0, &bind.1);
@@ -31,10 +43,11 @@ async fn main() -> Result<(), std::io::Error> {
                     .finish(),
             )
     })
-        .workers(1)
-        .bind(bind)?
-        .run()
-        .await
+    .workers(1)
+    .bind(bind)?
+    .run().await?;
+
+    Ok(())
 }
 
 fn get_run_options() -> RunOptions {
