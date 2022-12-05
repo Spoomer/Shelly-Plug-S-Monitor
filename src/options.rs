@@ -42,8 +42,8 @@ impl RunOptions {
 impl Clone for RunOptions {
     fn clone(&self) -> Self {
         Self {
-            port: self.port.clone(),
-            archive: self.archive.clone(),
+            port: self.port,
+            archive: self.archive,
             authorization: self.authorization.clone(),
         }
     }

@@ -41,9 +41,8 @@ pub fn archive_service(
     while !cancel {
         if let Ok(elapsed) = last.elapsed() {
             if elapsed.as_secs() >= 60 {
-                match archive_data(&connection, runoptions) {
-                    Ok(()) => last = SystemTime::now(),
-                    Err(_) => (),
+                if let Ok(()) = archive_data(&connection, runoptions) {
+                    last = SystemTime::now()
                 }
             }
         }
@@ -85,7 +84,6 @@ fn create_entry(
     }
     Ok(())
 }
-
 
 fn remove_old_entries(connection: &rusqlite::Connection) -> Result<(), Box<dyn std::error::Error>> {
     _ = connection.execute("DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5) ", [1])?;
