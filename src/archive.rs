@@ -61,7 +61,7 @@ fn archive_data(
     connection: &rusqlite::Connection,
     runoptions: &RunOptions,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let json = shelly_api::get_from_shelly_plug_s(runoptions)?;
+    let json = shelly_api::get_meter_status_from_shelly_plug_s(runoptions)?;
     let meter = serde_json::from_str::<ShellyPlugSMeter>(&json)?;
     create_entry(connection, &meter)
 }
@@ -71,22 +71,30 @@ fn create_entry(
     meter: &ShellyPlugSMeter,
 ) -> Result<(), Box<dyn std::error::Error>> {
     //check for entry
-    let mut statement = connection
-        .prepare("SELECT Count(*) from Archive WHERE plug_id = ?1 AND timestamp = ?2;")?;
+    let mut statement = connection.prepare(CHECK_ENTRY)?;
     let mut rows = statement.query((1, &meter.timestamp))?;
     if let Some(row) = rows.next()? {
         let count = row.get::<usize, u8>(0)?;
         if count == 0 {
             //write entry
-            connection.execute("INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6)",
-    (meter.timestamp, (meter.power * 1000.0) as u32, PowerUnit::Milliwatt as u8, (meter.counters[0] * 1000.0) as u32, EnergyUnit::MiliwattMinute as u8, meter.total * 1000))?;
+            connection.execute(
+                ADD_ENTRY,
+                (
+                    meter.timestamp,
+                    (meter.power * 1000.0) as u32,
+                    PowerUnit::Milliwatt as u8,
+                    (meter.counters[0] * 1000.0) as u32,
+                    EnergyUnit::MiliwattMinute as u8,
+                    meter.total * 1000,
+                ),
+            )?;
         }
     }
     Ok(())
 }
 
 fn remove_old_entries(connection: &rusqlite::Connection) -> Result<(), Box<dyn std::error::Error>> {
-    _ = connection.execute("DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5) ", [1])?;
+    _ = connection.execute(DELETE_ENTRIES, [1])?;
     Ok(())
 }
 
@@ -106,20 +114,22 @@ pub fn init_archive(
         connection = rusqlite::Connection::open(":memory:")?;
     }
 
-    connection.execute("CREATE TABLE Archive_autoinc(num INTEGER);", ())?;
-    connection.execute("INSERT INTO Archive_autoinc(num) VALUES(0);", ())?;
-    connection.execute("CREATE TABLE Archive(timestamp INTEGER, plug_id INTEGER, power INTEGER,power_unit INTEGER, energy INTEGER, energy_unit INTEGER, total_energy INTEGER, PRIMARY KEY(timestamp, plug_id)) WITHOUT ROWID;",())?;
-    connection.execute("CREATE TRIGGER insert_trigger BEFORE INSERT ON Archive BEGIN UPDATE Archive_autoinc SET num=num+1;END;", ())?;
-
-    connection.execute("CREATE TABLE ShellyPlugs(id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, room TEXT, product_name TEXT, ip TEXT);",())?;
-    connection.execute(
-        "INSERT INTO ShellyPlugs(label,product_name) VALUES ('default','Shelly Plug S');",
-        (),
-    )?;
+    connection.execute_batch(CREATE_TABLES)?;
 
     Ok(connection)
 }
-
+const CREATE_TABLES : &str = " BEGIN;
+ CREATE TABLE Archive(timestamp INTEGER, plug_id INTEGER, power INTEGER,power_unit INTEGER, energy INTEGER, energy_unit INTEGER, total_energy INTEGER, PRIMARY KEY(timestamp, plug_id)) WITHOUT ROWID;
+ CREATE TABLE Archive_autoinc(num INTEGER); 
+ INSERT INTO Archive_autoinc(num) VALUES(0);
+ CREATE TRIGGER insert_trigger BEFORE INSERT ON Archive BEGIN UPDATE Archive_autoinc SET num=num+1;END;
+ CREATE TABLE ShellyPlugs(id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, room TEXT, product_name TEXT, ip TEXT);
+ INSERT INTO ShellyPlugs(label,product_name) VALUES ('default','Shelly Plug S');
+ COMMIT;
+ ";
+const CHECK_ENTRY: &str = "SELECT Count(*) from Archive WHERE plug_id = ?1 AND timestamp = ?2;";
+const ADD_ENTRY : &str = "INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6);";
+const DELETE_ENTRIES : &str = "DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5);";
 #[cfg(test)]
 mod tests {
     use super::*;

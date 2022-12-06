@@ -1,13 +1,12 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use actix_web_lab::web::spa;
 
-use shelly_web::options::RunOptions;
-use shelly_web::{archive, options, routes};
-use std::{env, thread};
+use shelly_web::{archive, routes};
+use std::{thread};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let options = get_run_options();
+    let options = shelly_web::options::get_run_options();
     let bind: (String, u16) = (String::from("127.0.0.1"), options.port);
     let cancel = false;
 
@@ -45,32 +44,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     })
     .workers(1)
     .bind(bind)?
-    .run().await?;
+    .run()
+    .await?;
 
     Ok(())
-}
-
-fn get_run_options() -> RunOptions {
-    let mut args = env::args();
-    //ignore first argument: executable name
-    args.next();
-    let mut port: Option<String> = None;
-    let mut archive: Option<String> = None;
-    let mut authentication: Option<String> = None;
-
-    //Env
-    if let Ok(auth) = env::var("AUTH") {
-        authentication = Some(auth);
-    }
-    // args overwrite Env
-    while let Some(arg) = args.next() {
-        if arg == "--port" || arg == "-p" {
-            port = args.next();
-        } else if arg == "--archive" || arg == "-a" {
-            archive = args.next();
-        } else if arg == "--auth" {
-            authentication = args.next();
-        }
-    }
-    return options::RunOptions::new(port, archive, authentication);
 }
