@@ -5,7 +5,8 @@ use crate::shelly_api;
 use crate::shelly_plug_s_meter::ShellyPlugSMeter;
 use rusqlite;
 
-struct _Archive {
+#[derive(serde::Serialize)]
+pub struct Archive {
     timestamp: u32,
     plug_id: u8,
     power: u32,
@@ -15,24 +16,98 @@ struct _Archive {
     total_energy: u32,
 }
 
+#[derive(serde::Serialize)]
 enum PowerUnit {
     Milliwatt,
-    _Watt,
-    _Kilowatt,
+    Watt,
+    Kilowatt,
 }
 
+impl From<i64> for PowerUnit {
+    fn from(value: i64) -> Self {
+        match value {
+            0 => Self::Milliwatt,
+            1 => Self::Watt,
+            2 => Self::Kilowatt,
+            _ => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse value to {name}"));
+            }
+        }
+    }
+}
+
+impl rusqlite::types::FromSql for PowerUnit {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        match value {
+            rusqlite::types::ValueRef::Null => Ok(PowerUnit::Milliwatt),
+            rusqlite::types::ValueRef::Integer(int) => Ok(int.into()),
+            rusqlite::types::ValueRef::Real(_) => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse Real to {name}"));
+            }
+            rusqlite::types::ValueRef::Text(_) => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse Text to {name}"));
+            }
+            rusqlite::types::ValueRef::Blob(_) => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse Blob to {name}"));
+            }
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
 enum EnergyUnit {
-    _MilliwattSeconds,
+    MilliwattSeconds,
     MiliwattMinute,
-    _WattSeconds,
-    _WattMinutes,
-    _WattHours,
-    _KilowattHours,
+    WattSeconds,
+    WattMinutes,
+    WattHours,
+    KilowattHours,
+}
+
+impl From<i64> for EnergyUnit {
+    fn from(value: i64) -> Self {
+        match value {
+            0 => Self::MilliwattSeconds,
+            1 => Self::MiliwattMinute,
+            2 => Self::WattSeconds,
+            3 => Self::WattMinutes,
+            4 => Self::WattHours,
+            5 => Self::KilowattHours,
+            _ => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse value to {name}"));
+            }
+        }
+    }
+}
+
+impl rusqlite::types::FromSql for EnergyUnit {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        match value {
+            rusqlite::types::ValueRef::Null => Ok(EnergyUnit::WattMinutes),
+            rusqlite::types::ValueRef::Integer(int) => Ok(int.into()),
+            rusqlite::types::ValueRef::Real(_) => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse Real to {name}"));
+            }
+            rusqlite::types::ValueRef::Text(_) => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse Text to {name}"));
+            }
+            rusqlite::types::ValueRef::Blob(_) => {
+                let name = nameof::name_of_type!(Self);
+                panic!("{}", format!("Could not parse Blob to {name}"));
+            }
+        }
+    }
 }
 
 pub fn archive_service(
     connection: rusqlite::Connection,
-    archive_path: &str,
     storage_size: usize,
     runoptions: &RunOptions,
     cancel: &bool,
@@ -47,9 +122,9 @@ pub fn archive_service(
             }
         }
         if storage_size != 0 {
-            if let Ok(metadata) = std::fs::metadata(archive_path) {
+            if let Ok(metadata) = std::fs::metadata(ARCHIVE_PATH) {
                 if metadata.len() > storage_size as u64 {
-                    _ = remove_old_entries(&connection);
+                    remove_old_entries(&connection).unwrap();
                 }
             }
         }
@@ -94,31 +169,71 @@ fn create_entry(
 }
 
 fn remove_old_entries(connection: &rusqlite::Connection) -> Result<(), Box<dyn std::error::Error>> {
-    _ = connection.execute(DELETE_ENTRIES, [1])?;
+    connection.execute(DELETE_ENTRIES, [1])?;
     Ok(())
 }
 
 /// Creates DB if not existent.
 /// # Parameter
 /// archive_path should be None, if InMemory should be used
-pub fn init_archive(
-    archive_path: Option<&str>,
-) -> Result<rusqlite::Connection, Box<dyn std::error::Error>> {
-    let connection: rusqlite::Connection;
-    if let Some(path) = archive_path {
-        if std::path::Path::new(path).exists() {
-            return Ok(rusqlite::Connection::open(path)?);
+pub fn init_archive(memory: bool) -> Result<rusqlite::Connection, Box<dyn std::error::Error>> {
+    let connection = get_connection(memory)?;
+    let mut statement = connection.prepare(CHECK_TABLE)?;
+    let mut rows = statement.query(&[(":name", "Archive")])?;
+    let row = rows.next()?;
+    if let Some(r) = row {
+        let count = r.get::<usize, u8>(0)?;
+        if count == 0 {
+            connection.execute_batch(CREATE_TABLES)?;
         }
-        connection = rusqlite::Connection::open(path)?;
     } else {
-        connection = rusqlite::Connection::open(":memory:")?;
+        connection.execute_batch(CREATE_TABLES)?;
     }
-
-    connection.execute_batch(CREATE_TABLES)?;
-
+    drop(rows);
+    drop(statement);
     Ok(connection)
 }
-const CREATE_TABLES : &str = " BEGIN;
+
+fn get_connection(memory: bool) -> Result<rusqlite::Connection, Box<dyn std::error::Error>> {
+    return if memory {
+        Ok(rusqlite::Connection::open(":memory:")?)
+    } else {
+        return if std::path::Path::new(ARCHIVE_PATH).exists() {
+            Ok(rusqlite::Connection::open(ARCHIVE_PATH)?)
+        } else {
+            Ok(rusqlite::Connection::open(ARCHIVE_PATH)?)
+        };
+    };
+}
+
+pub fn get_entries(
+    memory: bool,
+    from: u32,
+    to: u32,
+) -> Result<Vec<Archive>, Box<dyn std::error::Error>> {
+    let connection = get_connection(memory)?;
+    let mut statement = connection.prepare(GET_ENTRIES)?;
+    let rows = statement.query_map((1, from, to), |row| {
+        Ok(Archive {
+            timestamp: row.get(0)?,
+            plug_id: row.get(1)?,
+            power: row.get(2)?,
+            power_unit: row.get(3)?,
+            energy: row.get(4)?,
+            energy_unit: row.get(5)?,
+            total_energy: row.get(6)?,
+        })
+    })?;
+    let mut vec = Vec::new();
+    for row in rows {
+        vec.push(row.unwrap());
+    }
+    Ok(vec)
+}
+
+pub const ARCHIVE_PATH: &str = "./archive.db";
+const CHECK_TABLE: &str = "SELECT Count(*) FROM sqlite_master WHERE type='table' AND name= :name ;";
+const CREATE_TABLES: &str = " BEGIN;
  CREATE TABLE Archive(timestamp INTEGER, plug_id INTEGER, power INTEGER,power_unit INTEGER, energy INTEGER, energy_unit INTEGER, total_energy INTEGER, PRIMARY KEY(timestamp, plug_id)) WITHOUT ROWID;
  CREATE TABLE Archive_autoinc(num INTEGER); 
  INSERT INTO Archive_autoinc(num) VALUES(0);
@@ -128,32 +243,33 @@ const CREATE_TABLES : &str = " BEGIN;
  COMMIT;
  ";
 const CHECK_ENTRY: &str = "SELECT Count(*) from Archive WHERE plug_id = ?1 AND timestamp = ?2;";
-const ADD_ENTRY : &str = "INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6);";
-const DELETE_ENTRIES : &str = "DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5);";
+const GET_ENTRIES: &str = "SELECT timestamp,plug_id,power,power_unit,energy,energy_unit,total_energy from Archive WHERE plug_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3;";
+const ADD_ENTRY: &str = "INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6);";
+const DELETE_ENTRIES: &str = "DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5);";
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn init_archive_test() {
-        let connection = init_archive(None).unwrap();
+        let connection = init_archive(true).unwrap();
         let tables = ["Archive", "Archive_autoinc", "ShellyPlugs"];
         for table in tables {
-            let mut statement = connection
-                .prepare("SELECT Count(*) FROM sqlite_master WHERE type='table' AND name= :name ;")
-                .unwrap();
+            let mut statement = connection.prepare(CHECK_TABLE).unwrap();
             let mut rows = statement.query(&[(":name", table)]).unwrap();
             let row = rows.next().unwrap();
             assert!(row.is_some());
             if let Some(row) = row {
                 let count = row.get::<usize, u8>(0).unwrap();
-                assert!(count == 1, "expect={} rowcount= {}", 1, count)
+                assert_eq!(count, 1, "expect={} rowcount= {}", 1, count)
             }
         }
     }
+
     #[test]
     fn create_entry_test() {
-        let connection = init_archive(None).unwrap();
+        let connection = init_archive(true).unwrap();
         let meter = ShellyPlugSMeter {
             power: 1.0,
             overpower: 1.0,
@@ -172,7 +288,7 @@ mod tests {
         assert!(row.is_some());
         if let Some(row) = row {
             let count = row.get::<usize, u8>(0).unwrap();
-            assert!(count == 1, "expect={} rowcount= {}", 1, count)
+            assert_eq!(count, 1, "expect={} rowcount= {}", 1, count)
         }
         // 10
         for i in 0..10 {
@@ -192,12 +308,13 @@ mod tests {
         assert!(row.is_some());
         if let Some(row) = row {
             let count = row.get::<usize, u8>(0).unwrap();
-            assert!(count == 10, "expect={} rowcount= {}", 10, count)
+            assert_eq!(count, 10, "expect={} rowcount= {}", 10, count)
         }
     }
+
     #[test]
     fn remove_old_entries_test() {
-        let connection = init_archive(None).unwrap();
+        let connection = init_archive(true).unwrap();
         for i in 0..10 {
             let meter = ShellyPlugSMeter {
                 power: 1.0,
@@ -216,7 +333,7 @@ mod tests {
         assert!(row.is_some());
         if let Some(row) = row {
             let count = row.get::<usize, u8>(0).unwrap();
-            assert!(count == 5, "expect={} rowcount= {}", 5, count)
+            assert_eq!(count, 5, "expect={} rowcount= {}", 5, count)
         }
     }
 }
