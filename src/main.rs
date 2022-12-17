@@ -15,14 +15,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match archive::init_archive(memory) {
             Ok(connection) => {
                 thread::spawn(move || {
-                    archive::archive_service(
-                        connection,
-                        storage_size,
-                        &cloned_options,
-                        &cancel,
-                    );
+                    archive::archive_service(connection, storage_size, &cloned_options, &cancel);
                 });
-                
+
                 // app = app.app_data(web::Data::new(connection)).service(
                 //     web::scope("/api")
                 //         .route("/shelly/archive", web::to(routes::archive_get_entries)),
@@ -30,28 +25,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(err) => return Err(err),
         }
-
     }
 
     println!("starting server at http://{}:{}", &bind.0, &bind.1);
     HttpServer::new(move || {
+        let mut api_scope = web::scope("/api").route("/shelly", web::to(routes::proxy_api_call));
+
         let mut app = App::new()
             .wrap(Logger::default().log_target("@"))
-            .app_data(web::Data::new(options.clone()))
-            .service(web::scope("/api").route("/shelly", web::to(routes::proxy_api_call)))
-            .service(
-                spa()
-                    .index_file("./frontend_vue/shelly-plug-s/dist/index.html")
-                    //.static_resources_mount("/static")
-                    .static_resources_location("./frontend_vue/shelly-plug-s/dist")
-                    .finish(),
-            );
-            if options.archive.is_some(){
-                app = app.app_data(web::Data::new(routes::MemoryState{memory})).service(
-                         web::scope("/archive")
-                             .route("/shelly-plug", web::to(routes::archive_get_entries)));
-            }
-        app
+            .app_data(web::Data::new(options.clone()));
+
+        if options.archive.is_some() {
+            app = app.app_data(web::Data::new(routes::MemoryState { memory }));
+            api_scope = api_scope.route("/archive", web::to(routes::archive_get_entries));
+        }
+
+        app.service(api_scope).service(
+            spa()
+                .index_file("./frontend_vue/shelly-plug-s/dist/index.html")
+                //.static_resources_mount("/static")
+                .static_resources_location("./frontend_vue/shelly-plug-s/dist")
+                .finish(),
+        )
     })
     .workers(1)
     .bind(bind)?

@@ -119,12 +119,12 @@ pub fn archive_service(
                 if let Ok(()) = archive_data(&connection, runoptions) {
                     last = SystemTime::now()
                 }
-            }
-        }
-        if storage_size != 0 {
-            if let Ok(metadata) = std::fs::metadata(ARCHIVE_PATH) {
-                if metadata.len() > storage_size as u64 {
-                    remove_old_entries(&connection).unwrap();
+                if storage_size != 0 {
+                    if let Ok(metadata) = std::fs::metadata(ARCHIVE_PATH) {
+                        if metadata.len() > (storage_size * 1000) as u64 {
+                            remove_old_entries(&connection).unwrap();
+                        }
+                    }
                 }
             }
         }
