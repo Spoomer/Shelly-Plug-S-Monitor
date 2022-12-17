@@ -17,11 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 thread::spawn(move || {
                     archive::archive_service(connection, storage_size, &cloned_options, &cancel);
                 });
-
-                // app = app.app_data(web::Data::new(connection)).service(
-                //     web::scope("/api")
-                //         .route("/shelly/archive", web::to(routes::archive_get_entries)),
-                // );
             }
             Err(err) => return Err(err),
         }
@@ -43,7 +38,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         app.service(api_scope).service(
             spa()
                 .index_file("./frontend_vue/shelly-plug-s/dist/index.html")
-                //.static_resources_mount("/static")
                 .static_resources_location("./frontend_vue/shelly-plug-s/dist")
                 .finish(),
         )
