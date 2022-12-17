@@ -82,7 +82,7 @@ const interval = setInterval(() => {
         <p>
             Total Energy since refreshing the page: {{ round(state.energy, 3) + " Ws" }}
         </p>
-        <p><input type="number" step="0.01" id="inputPricePerKwh" :value="pricePerKwh" @change="changepricePerKwh" > Money per kWh</p>
+        <p><input type="number" step="0.01" id="inputPricePerKwh" :value="pricePerKwh" @input="changepricePerKwh" > Money per kWh</p>
         <p>Cost since Reload: {{round(pricePerKwh * state.energy / 3600000,2)}}</p>
         <p>Cost since plug in: {{round(pricePerKwh * state.currentJson.total / 60000,2)}}</p>
     </div>

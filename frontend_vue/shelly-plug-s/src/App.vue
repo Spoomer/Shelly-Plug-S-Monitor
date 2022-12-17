@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { reactive } from 'vue'
 import Shelly from './components/Shelly.vue'
+import Archive from './components/Archive.vue'
+const state = reactive({
+  archive: false,
+})
+
 </script>
 
 <template>
@@ -10,7 +16,9 @@ import Shelly from './components/Shelly.vue'
   </header>
 
   <main>
-    <Shelly />
+    <button @click="()=>state.archive=!state.archive">Switch to {{state.archive ? "Dashboard" : "Archive" }}</button>
+    <Shelly v-if="!state.archive"/>
+    <Archive v-if="state.archive"/>
   </main>
 </template>
 
