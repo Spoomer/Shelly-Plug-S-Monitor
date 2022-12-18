@@ -65,7 +65,7 @@ function updateChart() {
             json.forEach(function (ele: any) {
                 state.series[0].data.push({
                     x: ele.timestamp * 1000,
-                    y: ele.energy,
+                    y: ele.energy / 1000,
                 });
             });
         }
