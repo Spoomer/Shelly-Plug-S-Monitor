@@ -37,8 +37,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         app.service(api_scope).service(
             spa()
-                .index_file("./frontend_vue/shelly-plug-s/dist/index.html")
-                .static_resources_location("./frontend_vue/shelly-plug-s/dist")
+                .index_file("./wwwroot/index.html")
+                .static_resources_location("./wwwroot")
                 .finish(),
         )
     })
