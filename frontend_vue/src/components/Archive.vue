@@ -45,7 +45,7 @@ const options = {
     }
 }
 async function fetchApi(from: number, to: number) {
-    return await fetch("http://" + window.location.host + "/api/archive?from=${from}&to=${to}").then((res) => {
+    return await fetch("http://" + window.location.host + `/api/archive?from=${from}&to=${to}`).then((res) => {
         if (res.ok) {
             return res.json();
         } else return "";
