@@ -66,7 +66,7 @@ const interval = setInterval(() => {
 </script>
 
 <template>
-    <div id="shelly">
+    <div id="shelly" v-if="state.currentJson.counters">
         <p>Current Power: {{ state.currentJson.power }} W</p>
         <p>
             Last measured Energy ({{ state.date.toUTCString() }}): {{ state.currentJson.counters[0] + " Wm or " }}

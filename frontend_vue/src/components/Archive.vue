@@ -45,7 +45,7 @@ const options = {
     }
 }
 async function fetchApi(from: number, to: number) {
-    return await fetch(`http://127.0.0.1:8080/api/archive?from=${from}&to=${to}`).then((res) => {
+    return await fetch("http://" + window.location.host + "/api/archive?from=${from}&to=${to}").then((res) => {
         if (res.ok) {
             return res.json();
         } else return "";
@@ -80,7 +80,7 @@ updateChart();
         <div class="form-floating mb-3">
             <label for="fromInput" color="black">from: </label>
             <input type="datetime" class="form-control" id="fromInput" v-model="state.from" style="width:50%">
-            
+
         </div>
         <div class="form-floating mb-3">
             <label for="toInput">to: </label>
