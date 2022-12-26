@@ -8,7 +8,7 @@ use std::thread;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let memory = false;
     let options = shelly_web::options::get_run_options();
-    let bind: (String, u16) = (String::from("127.0.0.1"), options.port);
+    let bind: (String, u16) = (String::from("0.0.0.0"), options.port);
     let cancel = false;
     if let Some(storage_size) = options.archive {
         let cloned_options = options.clone();

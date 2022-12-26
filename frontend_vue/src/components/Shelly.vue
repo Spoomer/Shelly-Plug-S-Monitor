@@ -40,7 +40,7 @@ const options = {
     }
 }
 async function fetchApi() {
-    return await fetch("http://127.0.0.1:8080/api/shelly").then((res) => {
+    return await fetch("http://"+window.location.host+"/api/shelly").then((res) => {
         if (res.ok) {
             return res.json();
         } else return "";
