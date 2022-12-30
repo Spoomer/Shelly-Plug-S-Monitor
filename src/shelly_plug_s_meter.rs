@@ -1,4 +1,4 @@
-use serde::{Deserialize};
+use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct ShellyPlugSMeter {
     pub power: f32,

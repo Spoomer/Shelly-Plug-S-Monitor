@@ -137,7 +137,9 @@ fn archive_data(
     runoptions: &RunOptions,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let json = shelly_api::get_meter_status_from_shelly_plug_s(runoptions)?;
-    let meter = serde_json::from_str::<ShellyPlugSMeter>(&json)?;
+    let mut meter = serde_json::from_str::<ShellyPlugSMeter>(&json)?;
+    let utc_offset = shelly_api::get_utc_offset_from_shelly_plug_s(runoptions)?;
+    meter.timestamp = (meter.timestamp as i128 - utc_offset as i128) as u64;
     create_entry(connection, &meter)
 }
 

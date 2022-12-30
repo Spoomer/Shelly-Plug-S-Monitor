@@ -1,4 +1,4 @@
-use crate::{options::RunOptions, archive::Archive};
+use crate::{archive::Archive, options::RunOptions};
 use actix_web::{body::MessageBody, web, HttpResponse, Responder};
 
 pub async fn proxy_api_call(data: web::Data<RunOptions>) -> impl Responder {
@@ -9,11 +9,17 @@ pub async fn proxy_api_call(data: web::Data<RunOptions>) -> impl Responder {
 }
 
 pub async fn archive_get_entries(
-    memory_state : web::Data<MemoryState>,
+    memory_state: web::Data<MemoryState>,
     timespan_query: web::Query<TimespanQuery>,
 ) -> impl Responder {
-    return match crate::archive::get_entries(memory_state.memory, timespan_query.from, timespan_query.to) {
-        Ok(entries) => HttpResponse::Ok().body(MessageBody::boxed(serde_json::to_string::<Vec<Archive>>(&entries).unwrap())),
+    return match crate::archive::get_entries(
+        memory_state.memory,
+        timespan_query.from,
+        timespan_query.to,
+    ) {
+        Ok(entries) => HttpResponse::Ok().body(MessageBody::boxed(
+            serde_json::to_string::<Vec<Archive>>(&entries).unwrap(),
+        )),
         Err(err) => HttpResponse::BadRequest().body(MessageBody::boxed(err.to_string())),
     };
 }
@@ -25,5 +31,5 @@ pub struct TimespanQuery {
 }
 
 pub struct MemoryState {
-    pub memory : bool
+    pub memory: bool,
 }

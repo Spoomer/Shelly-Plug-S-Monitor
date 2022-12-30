@@ -68,7 +68,6 @@ impl Clone for RunOptions {
 }
 
 pub fn get_run_options() -> RunOptions {
-
     let mut options: RunOptions = RunOptions {
         port: 8080,
         archive: None,
