@@ -7,5 +7,5 @@ cd ..
 mkdir release
 cp -r ./wwwroot/ ./release/wwwroot/
 cp ./target/arm-unknown-linux-gnueabihf/release/shelly_web ./release/shelly_web
-cp ./config.json ./release/config.json
+cp ./config.json ./release/config.json.template
 zip -rm release.zip release
