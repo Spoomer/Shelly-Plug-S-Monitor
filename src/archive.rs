@@ -42,17 +42,11 @@ impl rusqlite::types::FromSql for PowerUnit {
         match value {
             rusqlite::types::ValueRef::Null => Ok(PowerUnit::Milliwatt),
             rusqlite::types::ValueRef::Integer(int) => Ok(int.into()),
-            rusqlite::types::ValueRef::Real(_) => {
+            rusqlite::types::ValueRef::Real(_)
+            | rusqlite::types::ValueRef::Text(_)
+            | rusqlite::types::ValueRef::Blob(_) => {
                 let name = nameof::name_of_type!(Self);
                 panic!("{}", format!("Could not parse Real to {name}"));
-            }
-            rusqlite::types::ValueRef::Text(_) => {
-                let name = nameof::name_of_type!(Self);
-                panic!("{}", format!("Could not parse Text to {name}"));
-            }
-            rusqlite::types::ValueRef::Blob(_) => {
-                let name = nameof::name_of_type!(Self);
-                panic!("{}", format!("Could not parse Blob to {name}"));
             }
         }
     }
@@ -90,17 +84,11 @@ impl rusqlite::types::FromSql for EnergyUnit {
         match value {
             rusqlite::types::ValueRef::Null => Ok(EnergyUnit::WattMinutes),
             rusqlite::types::ValueRef::Integer(int) => Ok(int.into()),
-            rusqlite::types::ValueRef::Real(_) => {
+            rusqlite::types::ValueRef::Real(_)
+            | rusqlite::types::ValueRef::Text(_)
+            | rusqlite::types::ValueRef::Blob(_) => {
                 let name = nameof::name_of_type!(Self);
                 panic!("{}", format!("Could not parse Real to {name}"));
-            }
-            rusqlite::types::ValueRef::Text(_) => {
-                let name = nameof::name_of_type!(Self);
-                panic!("{}", format!("Could not parse Text to {name}"));
-            }
-            rusqlite::types::ValueRef::Blob(_) => {
-                let name = nameof::name_of_type!(Self);
-                panic!("{}", format!("Could not parse Blob to {name}"));
             }
         }
     }
@@ -120,8 +108,8 @@ pub fn archive_service(
                     last = SystemTime::now()
                 }
                 if storage_size != 0 {
-                    if let Ok(metadata) = std::fs::metadata(ARCHIVE_PATH) {
-                        if metadata.len() > (storage_size * 1000) as u64 {
+                    if let Ok(db_size) = check_db_size(&connection) {
+                        if db_size > (storage_size * 1024) {
                             remove_old_entries(&connection).unwrap();
                         }
                     }
@@ -162,12 +150,16 @@ fn create_entry(
                     PowerUnit::Milliwatt as u8,
                     (meter.counters[0] * 1000.0) as u32,
                     EnergyUnit::MiliwattMinute as u8,
-                    meter.total * 1000,
+                    meter.total as u64 * 1000,
                 ),
             )?;
         }
     }
     Ok(())
+}
+fn check_db_size(connection: &rusqlite::Connection) -> Result<usize, Box<dyn std::error::Error>> {
+    let size = connection.query_row(GET_DB_SIZE, [], |row| row.get::<usize, usize>(0))?;
+    Ok(size)
 }
 
 fn remove_old_entries(connection: &rusqlite::Connection) -> Result<(), Box<dyn std::error::Error>> {
@@ -248,6 +240,7 @@ const CHECK_ENTRY: &str = "SELECT Count(*) from Archive WHERE plug_id = ?1 AND t
 const GET_ENTRIES: &str = "SELECT timestamp,plug_id,power,power_unit,energy,energy_unit,total_energy from Archive WHERE plug_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3;";
 const ADD_ENTRY: &str = "INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6);";
 const DELETE_ENTRIES: &str = "DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5);";
+const GET_DB_SIZE: &str = "Select (((Select * From PRAGMA_PAGE_COUNT) - (Select * From PRAGMA_FREELIST_COUNT)) * (Select * From PRAGMA_PAGE_SIZE));";
 
 #[cfg(test)]
 mod tests {
