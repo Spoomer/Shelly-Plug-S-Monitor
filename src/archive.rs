@@ -13,7 +13,7 @@ pub struct Archive {
     power_unit: PowerUnit,
     energy: u32,
     energy_unit: EnergyUnit,
-    total_energy: u32,
+    total_energy: u64,
 }
 
 #[derive(serde::Serialize)]
@@ -220,7 +220,7 @@ pub fn get_entries(
     })?;
     let mut vec = Vec::new();
     for row in rows {
-        vec.push(row.unwrap());
+        vec.push(row?);
     }
     Ok(vec)
 }
