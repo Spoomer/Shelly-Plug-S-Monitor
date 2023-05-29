@@ -222,7 +222,33 @@ pub fn get_entries(
     for row in rows {
         vec.push(row?);
     }
-    Ok(vec)
+    match vec.len() > 1000 {
+        true => Ok(aggregate_archive_data(vec)),
+        false => Ok(vec),
+    }
+    
+}
+
+fn aggregate_archive_data(vec: Vec<Archive>) -> Vec<Archive> {
+    let diff = vec[1].timestamp - vec[0].timestamp;
+    match diff {
+        0..=59 => aggregate_to_minute(vec) ,
+        60..=3599 => aggregate_to_hour(vec),
+        3600..=86399 => aggregate_to_day(vec),
+        _ => vec
+    }
+}
+
+fn aggregate_to_day(vec: Vec<Archive>) -> Vec<Archive> {
+    todo!()
+}
+
+fn aggregate_to_hour(vec: Vec<Archive>) -> Vec<Archive> {
+    todo!()
+}
+
+fn aggregate_to_minute(vec: Vec<Archive>) -> Vec<Archive> {
+    todo!()
 }
 
 pub const ARCHIVE_PATH: &str = "./archive.db";
