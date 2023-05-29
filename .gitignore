@@ -2,3 +2,7 @@
 /.idea
 .secret
 .idea/
+.vscode/
+
+archive.db
+wwwroot/
