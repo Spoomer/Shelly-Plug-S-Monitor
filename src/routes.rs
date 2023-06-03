@@ -1,6 +1,12 @@
 use crate::{aggreated_archive_data::EnergyData, options::RunOptions};
 use actix_web::{body::MessageBody, web, HttpResponse, Responder};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub async fn get_version() -> impl Responder {
+    HttpResponse::Ok().body(VERSION)
+}
+
 pub async fn proxy_api_call(data: web::Data<RunOptions>) -> impl Responder {
     return match crate::shelly_api::get_meter_status_from_shelly_plug_s(&data) {
         Ok(json) => HttpResponse::Ok().body(MessageBody::boxed(json)),

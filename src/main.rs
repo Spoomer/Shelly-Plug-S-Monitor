@@ -29,7 +29,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("starting server at http://{}:{}", &bind.0, &bind.1);
     HttpServer::new(move || {
-        let mut api_scope = web::scope("/api").route("/shelly", web::to(routes::proxy_api_call));
+        let mut api_scope = web::scope("/api")
+            .route("/shelly", web::to(routes::proxy_api_call))
+            .route("/version", web::to(routes::get_version));
 
         let mut app = App::new()
             .wrap(Logger::default().log_target("@"))
