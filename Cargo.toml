@@ -13,4 +13,3 @@ rusqlite = { version = "0.28.0", features = ["bundled"] }
 serde = { version = "1.0.105", features = ["derive"] }
 serde_json = "1.0.89"
 nameof = "1.2.2"
-chrono = "0.4.26"

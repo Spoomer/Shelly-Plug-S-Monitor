@@ -1,4 +1,4 @@
-use crate::{options::RunOptions, aggreated_archive_data::EnergyData};
+use crate::{aggreated_archive_data::EnergyData, options::RunOptions};
 use actix_web::{body::MessageBody, web, HttpResponse, Responder};
 
 pub async fn proxy_api_call(data: web::Data<RunOptions>) -> impl Responder {
