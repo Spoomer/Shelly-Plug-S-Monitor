@@ -1,3 +1,5 @@
+use serde_json::{Number, Value};
+
 use crate::options::RunOptions;
 
 pub fn get_meter_status_from_shelly_plug_s(
@@ -9,9 +11,16 @@ pub fn get_meter_status_from_shelly_plug_s(
     }
     let response = request_result.send()?;
     return match response.as_str() {
-        Ok(json) => Ok(json.to_owned()),
+        Ok(json) => Ok(add_utc_offset(options, &json)?.to_owned()),
         Err(err) => Err(Box::new(err)),
     };
+}
+
+fn add_utc_offset(options: &RunOptions, json: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let mut shelly_meter: Value = serde_json::from_str(json)?;
+    let utc_offset: i32 = get_utc_offset_from_shelly_plug_s(options)?;
+    shelly_meter["utcOffset"] = Value::Number(Number::from(utc_offset));
+    Ok(serde_json::to_string(&shelly_meter)?)
 }
 
 pub fn get_utc_offset_from_shelly_plug_s(

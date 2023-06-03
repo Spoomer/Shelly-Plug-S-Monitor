@@ -74,7 +74,7 @@ const interval = setInterval(() => {
         });
         state.energy += state.currentJson.power;
     }
-    state.date = new Date(state.currentJson.timestamp * 1000);
+    state.date = new Date((state.currentJson.timestamp  - state.currentJson.utcOffset) * 1000);
 
     //ApexCharts.exec("energylinechart", "updateSeries", series);
 }, 1000);
