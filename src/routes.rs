@@ -1,4 +1,4 @@
-use crate::{archive::Archive, options::RunOptions};
+use crate::{options::RunOptions, aggreated_archive_data::EnergyData};
 use actix_web::{body::MessageBody, web, HttpResponse, Responder};
 
 pub async fn proxy_api_call(data: web::Data<RunOptions>) -> impl Responder {
@@ -18,7 +18,7 @@ pub async fn archive_get_entries(
         timespan_query.to,
     ) {
         Ok(entries) => HttpResponse::Ok().body(MessageBody::boxed(
-            serde_json::to_string::<Vec<Archive>>(&entries).unwrap(),
+            serde_json::to_string::<Vec<EnergyData>>(&entries).unwrap(),
         )),
         Err(err) => HttpResponse::BadRequest().body(MessageBody::boxed(err.to_string())),
     };

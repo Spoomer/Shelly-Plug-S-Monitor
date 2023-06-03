@@ -1,10 +1,11 @@
 use std::time::SystemTime;
 
-use crate::archive::{PowerUnit, EnergyUnit, Archive};
+use crate::aggreated_archive_data::{AggregatedArchiveData, EnergyData, GetEnergyData};
+use crate::archive::{Archive, EnergyUnit, PowerUnit};
 use crate::options::RunOptions;
 use crate::shelly_api;
 use crate::shelly_plug_s_meter::ShellyPlugSMeter;
-
+use chrono::{TimeZone, Timelike, Utc};
 
 pub fn archive_service(
     connection: rusqlite::Connection,
@@ -130,7 +131,7 @@ pub fn get_entries(
     memory: bool,
     from: u32,
     to: u32,
-) -> Result<Vec<Archive>, Box<dyn std::error::Error>> {
+) -> Result<Vec<EnergyData>, Box<dyn std::error::Error>> {
     let connection = get_connection(memory)?;
     let mut statement = connection.prepare(GET_ENTRIES)?;
     let rows = statement.query_map((1, from, to), |row| {
@@ -144,36 +145,60 @@ pub fn get_entries(
             total_energy: row.get(6)?,
         })
     })?;
-    let mut vec = Vec::new();
+    let mut vec: Vec<Archive> = Vec::new();
     for row in rows {
         vec.push(row?);
     }
     match vec.len() > 1000 {
-        true => Ok(aggregate_archive_data(vec)),
-        false => Ok(vec),
+        true => Ok(aggregate_to_archive_data(vec)?
+            .iter()
+            .map(|aggregated_data| aggregated_data.get_energy_data())
+            .collect()),
+        false => Ok(vec
+            .iter()
+            .map(|archive_data| archive_data.get_energy_data())
+            .collect()),
     }
 }
 
-fn aggregate_archive_data(vec: Vec<Archive>) -> Vec<Archive> {
-    let diff = vec[1].timestamp - vec[0].timestamp;
-    match diff {
-        0..=59 => aggregate_to_minute(vec),
-        60..=3599 => aggregate_to_hour(vec),
-        3600..=86399 => aggregate_to_day(vec),
-        _ => vec,
+fn aggregate_to_archive_data(
+    vec: Vec<Archive>,
+) -> Result<Vec<AggregatedArchiveData>, Box<dyn std::error::Error>> {
+    let aggregated_datas: Vec<AggregatedArchiveData> = Vec::new();
+    for ele in vec {
+        if aggregated_datas.len() == 0
+            || is_new_hour(&ele, &aggregated_datas[aggregated_datas.len() - 1])?
+        {
+            let aggregated_data: AggregatedArchiveData = AggregatedArchiveData {
+                timestamp: todo!(),
+                plug_id: todo!(),
+                energy: todo!(),
+                energy_unit: todo!(),
+                granularity: todo!(),
+            };
+            aggregated_datas.push(aggregated_data);
+        }
     }
+    Ok(aggregated_datas)
 }
 
-fn aggregate_to_day(vec: Vec<Archive>) -> Vec<Archive> {
-    todo!()
+fn is_new_hour(
+    ele: &Archive,
+    aggregated_data: &AggregatedArchiveData,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    return Ok(get_hour(ele.timestamp)? != get_hour(aggregated_data.timestamp)?);
 }
-
-fn aggregate_to_hour(vec: Vec<Archive>) -> Vec<Archive> {
-    todo!()
-}
-
-fn aggregate_to_minute(vec: Vec<Archive>) -> Vec<Archive> {
-    todo!()
+fn get_hour(timestamp: u64) -> Result<u32, Box<dyn std::error::Error>> {
+    let datetime = Utc.timestamp_opt(timestamp as i64, 0);
+    match datetime {
+        chrono::LocalResult::Ambiguous(_, _) | chrono::LocalResult::None => {
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!("timestamp {} could not be converted", timestamp),
+            )));
+        }
+        chrono::LocalResult::Single(date_time) => Ok(date_time.time().hour()),
+    }
 }
 
 pub const ARCHIVE_PATH: &str = "./archive.db";
