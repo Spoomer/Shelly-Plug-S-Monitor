@@ -1,7 +1,7 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use actix_web_lab::web::spa;
 
-use shelly_web::{archive, routes};
+use shelly_web::{routes, archive_service};
 use std::thread;
 
 #[actix_web::main]
@@ -12,10 +12,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cancel = false;
     if let Some(storage_size) = options.archive {
         let cloned_options = options.clone();
-        match archive::init_archive(memory) {
+        match archive_service::init_archive(memory) {
             Ok(connection) => {
                 thread::spawn(move || {
-                    archive::archive_service(connection, storage_size, &cloned_options, &cancel);
+                    archive_service::archive_service(connection, storage_size, &cloned_options, &cancel);
                 });
             }
             Err(err) => return Err(err),

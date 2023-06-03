@@ -12,7 +12,7 @@ pub async fn archive_get_entries(
     memory_state: web::Data<MemoryState>,
     timespan_query: web::Query<TimespanQuery>,
 ) -> impl Responder {
-    return match crate::archive::get_entries(
+    return match crate::archive_service::get_entries(
         memory_state.memory,
         timespan_query.from,
         timespan_query.to,
