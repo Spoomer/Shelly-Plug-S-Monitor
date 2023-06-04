@@ -99,7 +99,7 @@ const interval = setInterval(() => {
         </p>
         <p><input type="number" step="0.01" id="inputPricePerKwh" :value="pricePerKwh" @input="changepricePerKwh"> Money
             per kWh</p>
-        <p>Cost since Reload: {{ round(pricePerKwh * state.energy / 3600000, 2) }}</p>
+        <p>Cost since Reload: {{ round(pricePerKwh * state.energy / 3600000, 6) }}</p>
         <p>Cost since plug in: {{ round(pricePerKwh * state.currentJson.total / 60000, 2) }}</p>
     </div>
     <apexchart :options="options" :series="state.series" type="line" height="300" />
