@@ -30,6 +30,19 @@ pub async fn archive_get_entries(
     };
 }
 
+pub async fn archive_delete_entries(
+    memory_state: web::Data<MemoryState>,
+    plug_id_query: web::Query<ArchiveDeleteEntriesQuery>,
+) -> impl Responder {
+    return match crate::archive_service::delete_all_entries(
+        memory_state.memory,
+        plug_id_query.plug_id,
+    ) {
+        Ok(_) => HttpResponse::Ok(),
+        Err(_) => HttpResponse::InternalServerError(),
+    };
+}
+
 #[derive(serde::Deserialize)]
 pub struct TimespanQuery {
     pub from: u32,
@@ -38,4 +51,10 @@ pub struct TimespanQuery {
 
 pub struct MemoryState {
     pub memory: bool,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ArchiveDeleteEntriesQuery {
+    #[serde(rename(deserialize = "plugId"))]
+    pub plug_id: u8,
 }

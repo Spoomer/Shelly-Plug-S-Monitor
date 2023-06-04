@@ -39,7 +39,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if options.archive.is_some() {
             app = app.app_data(web::Data::new(routes::MemoryState { memory }));
-            api_scope = api_scope.route("/archive", web::to(routes::archive_get_entries));
+            api_scope = api_scope
+                .route("/archive/delete", web::to(routes::archive_delete_entries))
+                .route("/archive", web::to(routes::archive_get_entries));
         }
 
         app.service(api_scope).service(

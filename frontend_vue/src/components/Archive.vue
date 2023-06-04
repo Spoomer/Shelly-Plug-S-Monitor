@@ -47,7 +47,7 @@ const state: ArchiveState = reactive({
     ],
     energy: 0,
     date: new Date(),
-    from: new Date(0),
+    from: new Date(1577836800000), //01.01.2020
     to: new Date(),
 })
 
@@ -87,9 +87,8 @@ function updateChart() {
     let fromEpoch = round((state.from.getTime()) / 1000, 0);
     let toEpoch = round((state.to.getTime()) / 1000, 0);
     fetchApi(fromEpoch, toEpoch).then((json) => {
-
+        state.series[0].data = [];
         if (json[0]) {
-            state.series[0].data = [];
             json.forEach(function (ele: any) {
                 state.series[0].data.push({
                     x: ele.timestamp * 1000,
@@ -100,6 +99,14 @@ function updateChart() {
     });
 }
 updateChart();
+
+async function deleteArchive() {
+    await fetch("http://" + window.location.host + `/api/archive/delete?plugId=1`).then((res) => {
+        if (res.ok) {
+            updateChart();
+        }
+    });
+}
 </script>
 
 
@@ -117,6 +124,7 @@ updateChart();
                 @input="handleToInput" style="width:50%">
         </div>
         <button @click="updateChart">Refresh</button>
+        <button @click="deleteArchive">Delete archive</button>
         <apexchart :options="options" :series="state.series" type="line" height="300" />
     </div>
 </template>

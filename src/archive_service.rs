@@ -95,6 +95,12 @@ fn remove_old_entries(connection: &rusqlite::Connection) -> Result<(), Box<dyn s
     Ok(())
 }
 
+pub fn delete_all_entries(memory: bool, plug_id: u8) -> Result<(), Box<dyn std::error::Error>> {
+    let connection = get_connection(memory)?;
+    connection.execute(DELETE_ALL_ENTRIES, [plug_id])?;
+    Ok(())
+}
+
 /// Creates DB if not existent.
 /// # Parameter
 /// archive_path should be None, if InMemory should be used
@@ -215,6 +221,8 @@ const CHECK_ENTRY: &str = "SELECT Count(*) from Archive WHERE plug_id = ?1 AND t
 const GET_ENTRIES: &str = "SELECT timestamp,plug_id,power,power_unit,energy,energy_unit,total_energy from Archive WHERE plug_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3;";
 const ADD_ENTRY: &str = "INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6);";
 const DELETE_ENTRIES: &str = "DELETE FROM Archive WHERE plug_id = ?1 AND timestamp IN (SELECT timestamp FROM Archive ORDER BY timestamp ASC LIMIT 5);";
+const DELETE_ALL_ENTRIES: &str = "DELETE FROM Archive WHERE plug_id = ?1;";
+
 const GET_DB_SIZE: &str = "Select (((Select * From PRAGMA_PAGE_COUNT) - (Select * From PRAGMA_FREELIST_COUNT)) * (Select * From PRAGMA_PAGE_SIZE));";
 
 #[cfg(test)]
