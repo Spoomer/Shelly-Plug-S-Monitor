@@ -1,5 +1,6 @@
 #! bin/bash
 # raspberry pi zero w
+export PATH="/home/spoomer/dev/rust_linker/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin:$PATH"
 cargo build -r --target arm-unknown-linux-gnueabihf
 cd ./frontend_vue
 npm run build
