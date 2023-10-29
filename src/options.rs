@@ -44,9 +44,9 @@ impl RunOptions {
     }
     pub fn add_port(&mut self, port: Option<String>) {
         if let Some(p) = port {
-            return if let Ok(port) = p.parse::<u16>() {
+            if let Ok(port) = p.parse::<u16>() {
                 self.port = port;
-            };
+            }
         }
     }
     pub fn add_archive(&mut self, archive: Option<String>) {
@@ -95,7 +95,7 @@ pub fn get_run_options() -> RunOptions {
             options.authentication = args.next();
         }
     }
-    return options;
+    options
 }
 
 fn read_config() -> Option<RunOptions> {

@@ -1,25 +1,29 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use actix_web_lab::web::spa;
 
-use shelly_web::{archive_service, routes};
-use std::thread;
+use shelly_web::{archive_service, cancellation_token::CancellationToken, routes};
+use std::{
+    sync::{Arc, RwLock},
+    thread,
+};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let memory = false;
     let options = shelly_web::options::get_run_options();
     let bind: (String, u16) = (String::from("0.0.0.0"), options.port);
-    let cancel = false;
+    let cancel = Arc::new(RwLock::new(CancellationToken::new()));
     if let Some(storage_size) = options.archive {
         let cloned_options = options.clone();
         match archive_service::init_archive(memory) {
             Ok(connection) => {
+                let cancel = cancel.clone();
                 thread::spawn(move || {
                     archive_service::archive_service(
                         connection,
                         storage_size,
                         &cloned_options,
-                        &cancel,
+                        cancel,
                     );
                 });
             }
@@ -41,7 +45,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             app = app.app_data(web::Data::new(routes::MemoryState { memory }));
             api_scope = api_scope
                 .route("/archive/delete", web::to(routes::archive_delete_entries))
-                .route("/archive", web::to(routes::archive_get_entries));
+                .route("/archive", web::to(routes::archive_get_entries))
+                .route("/archive/export", web::to(routes::archive_export_entries));
         }
 
         app.service(api_scope).service(
@@ -55,6 +60,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .bind(bind)?
     .run()
     .await?;
-
+    cancel.write().unwrap().cancel();
     Ok(())
 }

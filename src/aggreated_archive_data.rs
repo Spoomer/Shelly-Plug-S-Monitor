@@ -9,12 +9,12 @@ pub struct AggregatedArchiveData {
 }
 impl GetEnergyData for AggregatedArchiveData {
     fn get_energy_data(&self) -> EnergyData {
-        return EnergyData {
+        EnergyData {
             timestamp: self.timestamp,
             plug_id: self.plug_id,
             energy: self.energy,
             energy_unit: self.energy_unit,
-        };
+        }
     }
 }
 pub enum Granularity {

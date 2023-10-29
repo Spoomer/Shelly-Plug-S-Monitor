@@ -1,9 +1,11 @@
+use std::sync::{Arc, RwLock};
 use std::time::SystemTime;
 
 use crate::aggreated_archive_data::{
     AggregatedArchiveData, EnergyData, GetEnergyData, Granularity,
 };
 use crate::archive::{Archive, EnergyUnit, PowerUnit};
+use crate::cancellation_token::CancellationToken;
 use crate::options::RunOptions;
 use crate::shelly_api;
 use crate::shelly_plug_s_meter::ShellyPlugSMeter;
@@ -12,10 +14,10 @@ pub fn archive_service(
     connection: rusqlite::Connection,
     storage_size: usize,
     runoptions: &RunOptions,
-    cancel: &bool,
+    cancellation_token: Arc<RwLock<CancellationToken>>,
 ) {
     let mut last: SystemTime = std::time::UNIX_EPOCH;
-    while !cancel {
+    while !cancellation_token.read().unwrap().is_cancelled() {
         if let Ok(elapsed) = last.elapsed() {
             if elapsed.as_secs() >= 60 {
                 if let Ok(()) = archive_data(&connection, runoptions) {
@@ -123,25 +125,41 @@ pub fn init_archive(memory: bool) -> Result<rusqlite::Connection, Box<dyn std::e
 }
 
 fn get_connection(memory: bool) -> Result<rusqlite::Connection, Box<dyn std::error::Error>> {
-    return if memory {
+    if memory {
         Ok(rusqlite::Connection::open(":memory:")?)
     } else {
-        return if std::path::Path::new(ARCHIVE_PATH).exists() {
-            Ok(rusqlite::Connection::open(ARCHIVE_PATH)?)
-        } else {
-            Ok(rusqlite::Connection::open(ARCHIVE_PATH)?)
-        };
-    };
+        Ok(rusqlite::Connection::open(ARCHIVE_PATH)?)
+    }
 }
 
 pub fn get_entries(
     memory: bool,
-    from: u32,
-    to: u32,
+    plug_id: u8,
+    from: u64,
+    to: u64,
 ) -> Result<Vec<EnergyData>, Box<dyn std::error::Error>> {
+    let vec = get_archive_entries(memory, plug_id, from, to)?;
+    match vec.len() > 1000 {
+        true => Ok(aggregate_to_archive_data(vec)?
+            .iter()
+            .map(|aggregated_data| aggregated_data.get_energy_data())
+            .collect()),
+        false => Ok(vec
+            .iter()
+            .map(|archive_data| archive_data.get_energy_data())
+            .collect()),
+    }
+}
+
+fn get_archive_entries(
+    memory: bool,
+    plug_id: u8,
+    from: u64,
+    to: u64,
+) -> Result<Vec<Archive>, Box<dyn std::error::Error>> {
     let connection = get_connection(memory)?;
     let mut statement = connection.prepare(GET_ENTRIES)?;
-    let rows = statement.query_map((1, from, to), |row| {
+    let rows = statement.query_map((plug_id, from, to), |row| {
         Ok(Archive {
             timestamp: row.get(0)?,
             plug_id: row.get(1)?,
@@ -156,16 +174,24 @@ pub fn get_entries(
     for row in rows {
         vec.push(row?);
     }
-    match vec.len() > 1000 {
-        true => Ok(aggregate_to_archive_data(vec)?
-            .iter()
-            .map(|aggregated_data| aggregated_data.get_energy_data())
-            .collect()),
-        false => Ok(vec
-            .iter()
-            .map(|archive_data| archive_data.get_energy_data())
-            .collect()),
+    Ok(vec)
+}
+
+pub(crate) fn export_all_entries(
+    memory: bool,
+    plug_id: u8,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let entries = get_archive_entries(
+        memory,
+        plug_id,
+        0,
+        std::time::UNIX_EPOCH.elapsed().unwrap().as_secs(),
+    )?;
+    let mut wtr = csv::WriterBuilder::new().from_writer(vec![]);
+    for entry in entries.iter() {
+        wtr.serialize(entry)?;
     }
+    Ok(wtr.into_inner()?)
 }
 
 /// Aggregates [`crate::archive::Archive`] structs to [`AggregatedArchiveData`] for one plug_id.
@@ -175,7 +201,7 @@ fn aggregate_to_archive_data(
 ) -> Result<Vec<AggregatedArchiveData>, Box<dyn std::error::Error>> {
     let mut aggregated_datas: Vec<AggregatedArchiveData> = Vec::new();
     for ele in vec {
-        if aggregated_datas.len() == 0
+        if aggregated_datas.is_empty()
             || is_different_hour(
                 ele.timestamp,
                 aggregated_datas[aggregated_datas.len() - 1].timestamp,
@@ -217,6 +243,7 @@ const CREATE_TABLES: &str = " BEGIN;
  INSERT INTO ShellyPlugs(label,product_name) VALUES ('default','Shelly Plug S');
  COMMIT;
  ";
+
 const CHECK_ENTRY: &str = "SELECT Count(*) from Archive WHERE plug_id = ?1 AND timestamp = ?2;";
 const GET_ENTRIES: &str = "SELECT timestamp,plug_id,power,power_unit,energy,energy_unit,total_energy from Archive WHERE plug_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3;";
 const ADD_ENTRY: &str = "INSERT INTO Archive(timestamp,plug_id,power, power_unit, energy, energy_unit, total_energy) Values(?1,1,?2,?3,?4,?5,?6);";

@@ -11,7 +11,7 @@ pub fn get_meter_status_from_shelly_plug_s(
     }
     let response = request_result.send()?;
     return match response.as_str() {
-        Ok(json) => Ok(add_utc_offset(options, &json)?.to_owned()),
+        Ok(json) => Ok(add_utc_offset(options, json)?.to_owned()),
         Err(err) => Err(Box::new(err)),
     };
 }

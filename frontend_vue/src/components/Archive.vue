@@ -125,6 +125,7 @@ async function deleteArchive() {
         </div>
         <button @click="updateChart">Refresh</button>
         <button @click="deleteArchive">Delete archive</button>
+        <a href="api/archive/export?plugId=1" download><button>Export archive</button></a>
         <apexchart :options="options" :series="state.series" type="line" height="300" />
     </div>
 </template>

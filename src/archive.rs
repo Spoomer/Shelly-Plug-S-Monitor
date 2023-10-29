@@ -2,7 +2,7 @@ use rusqlite;
 
 use crate::aggreated_archive_data::{EnergyData, GetEnergyData};
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Archive {
     pub timestamp: u64,
     pub plug_id: u8,
@@ -15,15 +15,15 @@ pub struct Archive {
 
 impl GetEnergyData for Archive {
     fn get_energy_data(&self) -> EnergyData {
-        return EnergyData {
+        EnergyData {
             timestamp: self.timestamp,
             plug_id: self.plug_id,
             energy: self.energy,
             energy_unit: self.energy_unit,
-        };
+        }
     }
 }
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum PowerUnit {
     Milliwatt,
     Watt,
@@ -59,7 +59,7 @@ impl rusqlite::types::FromSql for PowerUnit {
     }
 }
 
-#[derive(serde::Serialize, Clone, Copy)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
 pub enum EnergyUnit {
     MilliwattSeconds,
     MiliwattMinute,
