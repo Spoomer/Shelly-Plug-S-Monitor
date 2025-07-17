@@ -1,7 +1,7 @@
-#! bin/bash
+#! /usr/bin/env bash
 # raspberry pi zero w
-export PATH="/home/spoomer/dev/rust_linker/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin:$PATH"
-cargo build -r --target arm-unknown-linux-gnueabihf
+cd ..
+cross  build --release --target arm-unknown-linux-gnueabihf
 podman run --rm -v "$PWD":/usr/src/app -w /usr/src/app/frontend_vue node npm install
 podman run --rm -v "$PWD":/usr/src/app -w /usr/src/app/frontend_vue node npm run build
 mkdir release

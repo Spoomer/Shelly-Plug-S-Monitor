@@ -13,9 +13,7 @@
 
 # Cross-Compile to raspberry pi zero
 
-## Install linker
-- rustup target add arm-unknown-linux-gnueabihf
-- Download gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf from https://developer.arm.com/downloads/-/gnu-a
-- change path in ./.cargo/config.toml
+## Install cross
+`cargo install cross --git https://github.com/cross-rs/cross`
 ## Cross-Compile
-`cargo build -r --target arm-unknown-linux-gnueabihf`
+`cross build --release --target arm-unknown-linux-gnueabihf`
