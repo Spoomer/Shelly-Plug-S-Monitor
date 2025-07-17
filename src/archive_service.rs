@@ -139,12 +139,15 @@ pub fn get_entries(
     to: u64,
 ) -> Result<Vec<EnergyData>, Box<dyn std::error::Error>> {
     let vec = get_archive_entries(memory, plug_id, from, to)?;
-    match vec.len() > 1000 {
-        true => Ok(aggregate_to_archive_data(vec)?
+    match vec.len() {
+        43200.. => Ok(aggregate_to_archive_data(vec, Granularity::Days)?.iter()
+            .map(|aggregated_data| aggregated_data.get_energy_data())
+            .collect()),
+         1440..43200 => Ok(aggregate_to_archive_data(vec, Granularity::Hours)?
             .iter()
             .map(|aggregated_data| aggregated_data.get_energy_data())
             .collect()),
-        false => Ok(vec
+        0..1440 => Ok(vec
             .iter()
             .map(|archive_data| archive_data.get_energy_data())
             .collect()),
@@ -198,21 +201,23 @@ pub(crate) fn export_all_entries(
 /// Don't pass vectors with multiple plug_ids.
 fn aggregate_to_archive_data(
     vec: Vec<Archive>,
+    granularity: Granularity
 ) -> Result<Vec<AggregatedArchiveData>, Box<dyn std::error::Error>> {
     let mut aggregated_datas: Vec<AggregatedArchiveData> = Vec::new();
     for ele in vec {
         if aggregated_datas.is_empty()
-            || is_different_hour(
+            || is_different_granularity(
+                granularity,
                 ele.timestamp,
                 aggregated_datas[aggregated_datas.len() - 1].timestamp,
             )
         {
             let aggregated_data: AggregatedArchiveData = AggregatedArchiveData {
-                timestamp: get_timestamp_last_round_hour(ele.timestamp),
+                timestamp: get_timestamp_last_round_timestamp(granularity, ele.timestamp),
                 plug_id: ele.plug_id,
                 energy: ele.energy,
                 energy_unit: ele.energy_unit,
-                granularity: Granularity::Hours,
+                granularity,
             };
             aggregated_datas.push(aggregated_data);
             continue;
@@ -223,14 +228,26 @@ fn aggregate_to_archive_data(
     Ok(aggregated_datas)
 }
 
-fn is_different_hour(first_timestamp: u64, second_timestamp: u64) -> bool {
-    get_timestamp_last_round_hour(first_timestamp)
-        != get_timestamp_last_round_hour(second_timestamp)
+fn is_different_granularity(granularity: Granularity, first_timestamp: u64, second_timestamp: u64) -> bool {
+    match granularity {
+        Granularity::Days => get_timestamp_last_round_day(first_timestamp)
+            != get_timestamp_last_round_day(second_timestamp),
+        Granularity::Hours => get_timestamp_last_round_day(first_timestamp)
+            != get_timestamp_last_round_day(second_timestamp),
+        _ => false,
+    }
 }
-
+fn get_timestamp_last_round_timestamp(granularity: Granularity,timestamp: u64) -> u64 {
+    match granularity {
+        Granularity::Days => get_timestamp_last_round_day(timestamp),
+        Granularity::Hours => get_timestamp_last_round_hour(timestamp),
+        _ => timestamp,
+    }
+}
 fn get_timestamp_last_round_hour(timestamp: u64) -> u64 {
     timestamp / 3600 * 3600
-}
+} // round via decimals cutoff
+fn get_timestamp_last_round_day(timestamp: u64) -> u64 { timestamp / 86400 * 86400 } // round via decimals cutoff
 
 pub const ARCHIVE_PATH: &str = "./archive.db";
 const CHECK_TABLE: &str = "SELECT Count(*) FROM sqlite_master WHERE type='table' AND name= :name ;";

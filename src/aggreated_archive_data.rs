@@ -17,6 +17,7 @@ impl GetEnergyData for AggregatedArchiveData {
         }
     }
 }
+#[derive(Copy, Clone)]
 pub enum Granularity {
     Hours,
     Days,
