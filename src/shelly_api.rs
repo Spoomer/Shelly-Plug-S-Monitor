@@ -1,23 +1,34 @@
+use serde_json::{Number, Value};
+
 use crate::options::RunOptions;
 
 pub fn get_meter_status_from_shelly_plug_s(
     options: &RunOptions,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let mut request_result = minreq::get("http://192.168.178.55/meter/0");
+    let url = options.shelly_api_url.as_ref().ok_or("Shelly API URL nicht angegeben")?;
+    let mut request_result = minreq::get(format!("http://{url}/meter/0"));
     if let Some(auth) = &options.authentication {
         request_result = request_result.with_header("Authorization", format!("Basic {}", auth));
     }
     let response = request_result.send()?;
     return match response.as_str() {
-        Ok(json) => Ok(json.to_owned()),
+        Ok(json) => Ok(add_utc_offset(options, json)?.to_owned()),
         Err(err) => Err(Box::new(err)),
     };
+}
+
+fn add_utc_offset(options: &RunOptions, json: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let mut shelly_meter: Value = serde_json::from_str(json)?;
+    let utc_offset: i32 = get_utc_offset_from_shelly_plug_s(options)?;
+    shelly_meter["utcOffset"] = Value::Number(Number::from(utc_offset));
+    Ok(serde_json::to_string(&shelly_meter)?)
 }
 
 pub fn get_utc_offset_from_shelly_plug_s(
     options: &RunOptions,
 ) -> Result<i32, Box<dyn std::error::Error>> {
-    let mut request_result = minreq::get("http://192.168.178.55/settings");
+    let url = options.shelly_api_url.as_ref().ok_or("Shelly API URL nicht angegeben")?;
+    let mut request_result = minreq::get(format!("http://{url}/settings"));
     if let Some(auth) = &options.authentication {
         request_result = request_result.with_header("Authorization", format!("Basic {}", auth));
     }

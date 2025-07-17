@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
+import { watch } from 'vue';
 
 const dataArr: any[] = [];
 const pricePerKwhCache = Number.parseFloat(localStorage.getItem("pricePerKwh") ?? "0");
-function changepricePerKwh(event: Event) {
-    pricePerKwh = Number.parseFloat((event.target as HTMLInputElement)?.value ?? 0);
-    localStorage.setItem("pricePerKwh", pricePerKwh.toString())
-}
+
 function displayLastMeasuredDate(): string {
     let dateStr: string = new Date(state.date.setSeconds(0)).toLocaleString();
     if (dateStr === 'Invalid Date') {
@@ -74,10 +72,14 @@ const interval = setInterval(() => {
         });
         state.energy += state.currentJson.power;
     }
-    state.date = new Date(state.currentJson.timestamp * 1000);
+    state.date = new Date((state.currentJson.timestamp  - state.currentJson.utcOffset) * 1000);
 
     //ApexCharts.exec("energylinechart", "updateSeries", series);
 }, 1000);
+
+watch(() => pricePerKwh, (newValue) => {
+  localStorage.setItem("pricePerKwh", newValue.toString());
+});
 </script>
 
 <template>
@@ -97,9 +99,9 @@ const interval = setInterval(() => {
         <p>
             Total Energy since refreshing the page: {{ round(state.energy, 3) + " Ws" }}
         </p>
-        <p><input type="number" step="0.01" id="inputPricePerKwh" :value="pricePerKwh" @input="changepricePerKwh"> Money
+        <p><input type="number" step="0.01" id="inputPricePerKwh" v-model.number="pricePerKwh"> Money
             per kWh</p>
-        <p>Cost since Reload: {{ round(pricePerKwh * state.energy / 3600000, 2) }}</p>
+        <p>Cost since Reload: {{ round(pricePerKwh * state.energy / 3600000, 6) }}</p>
         <p>Cost since plug in: {{ round(pricePerKwh * state.currentJson.total / 60000, 2) }}</p>
     </div>
     <apexchart :options="options" :series="state.series" type="line" height="300" />

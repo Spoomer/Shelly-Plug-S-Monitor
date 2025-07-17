@@ -3,50 +3,20 @@ use std::env;
 
 #[derive(Deserialize)]
 pub struct RunOptions {
+    pub host: Option<String>,
     pub port: u16,
     pub archive: Option<usize>,
     pub authentication: Option<String>,
+    #[serde(default, rename = "shellyApiUrl")]
+    pub shelly_api_url: Option<String>,
 }
 
 impl RunOptions {
-    pub fn new(
-        port: Option<String>,
-        archive: Option<String>,
-        authorization: Option<String>,
-    ) -> Self {
-        let mut archive_parse_result: Option<usize> = None;
-        if let Some(a) = archive {
-            if let Ok(archive_u16) = a.parse::<usize>() {
-                archive_parse_result = Some(archive_u16)
-            }
-        }
-
-        if let Some(p) = port {
-            return if let Ok(port) = p.parse::<u16>() {
-                Self {
-                    port,
-                    archive: archive_parse_result,
-                    authentication: authorization,
-                }
-            } else {
-                Self {
-                    port: 8080,
-                    archive: archive_parse_result,
-                    authentication: authorization,
-                }
-            };
-        }
-        Self {
-            port: 8080,
-            archive: archive_parse_result,
-            authentication: authorization,
-        }
-    }
     pub fn add_port(&mut self, port: Option<String>) {
         if let Some(p) = port {
-            return if let Ok(port) = p.parse::<u16>() {
+            if let Ok(port) = p.parse::<u16>() {
                 self.port = port;
-            };
+            }
         }
     }
     pub fn add_archive(&mut self, archive: Option<String>) {
@@ -60,9 +30,11 @@ impl RunOptions {
 impl Clone for RunOptions {
     fn clone(&self) -> Self {
         Self {
+            host: self.host.clone(),
             port: self.port,
             archive: self.archive,
             authentication: self.authentication.clone(),
+            shelly_api_url: self.shelly_api_url.clone(),
         }
     }
 }
@@ -72,6 +44,8 @@ pub fn get_run_options() -> RunOptions {
         port: 8080,
         archive: None,
         authentication: None,
+        shelly_api_url: None,
+        host: None,
     };
     if let Some(config) = read_config() {
         options = config;
@@ -94,8 +68,14 @@ pub fn get_run_options() -> RunOptions {
         } else if arg == "--auth" {
             options.authentication = args.next();
         }
+        else if arg == "--shelly-api-url" {
+            options.shelly_api_url = args.next();
+        }
+        else if arg == "--host" {
+            options.host = args.next();
+        }
     }
-    return options;
+    options
 }
 
 fn read_config() -> Option<RunOptions> {
