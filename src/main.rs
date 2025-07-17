@@ -11,7 +11,10 @@ use std::{
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let memory = false;
     let options = shelly_web::options::get_run_options();
-    let bind: (String, u16) = (String::from("0.0.0.0"), options.port);
+    if options.host.is_none() {
+        return Err("host is not set".into());
+    }
+    let bind: (String, u16) = (options.host.clone().unwrap(), options.port);
     let cancel = Arc::new(RwLock::new(CancellationToken::new()));
     if let Some(storage_size) = options.archive {
         let cloned_options = options.clone();

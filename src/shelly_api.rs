@@ -5,7 +5,8 @@ use crate::options::RunOptions;
 pub fn get_meter_status_from_shelly_plug_s(
     options: &RunOptions,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let mut request_result = minreq::get("http://192.168.178.55/meter/0");
+    let url = options.shelly_api_url.as_ref().ok_or("Shelly API URL nicht angegeben")?;
+    let mut request_result = minreq::get(format!("http://{url}/meter/0"));
     if let Some(auth) = &options.authentication {
         request_result = request_result.with_header("Authorization", format!("Basic {}", auth));
     }
@@ -26,7 +27,8 @@ fn add_utc_offset(options: &RunOptions, json: &str) -> Result<String, Box<dyn st
 pub fn get_utc_offset_from_shelly_plug_s(
     options: &RunOptions,
 ) -> Result<i32, Box<dyn std::error::Error>> {
-    let mut request_result = minreq::get("http://192.168.178.55/settings");
+    let url = options.shelly_api_url.as_ref().ok_or("Shelly API URL nicht angegeben")?;
+    let mut request_result = minreq::get(format!("http://{url}/settings"));
     if let Some(auth) = &options.authentication {
         request_result = request_result.with_header("Authorization", format!("Basic {}", auth));
     }
