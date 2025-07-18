@@ -58,7 +58,7 @@ const options = {
     },
     xaxis: {
         type: "datetime",
-        labels : {
+        labels: {
             datetimeUTC: false,
         }
     },
@@ -112,20 +112,34 @@ async function deleteArchive() {
 
 <template>
     <div class="archive">
-        <div class="form-floating mb-3">
-            <label for="fromInput" color="black">from: </label>
-            <input type="datetime-local" step="1" class="form-control" id="fromInput" :value="getDateString(state.from)"
-                @input="handleFromInput" style="width:50%">
-
+    <div id="input" style="display: flex; flex-direction: column; align-items: start; margin-bottom: 24px;max-width: 500px;">
+            <div class="input-group mb-3" style="max-width: 500px;">
+                <span class="input-group-text" style="min-width: 60px;">from</span>
+                <input type="datetime-local" step="1" class="form-control" id="fromInput"
+                    :value="getDateString(state.from)" @input="handleFromInput">
+            </div>
+            <div class="input-group mb-3" style="max-width: 500px;">
+                <span class="input-group-text" style="min-width: 60px;">to</span>
+                <input type="datetime-local" step="1" class="form-control" id="toInput" :value="getDateString(state.to)"
+                    @input="handleToInput">
+            </div>
+            <div style="display: flex; justify-content: center; margin-bottom: 24px; width: 100%;">
+                <button @click="updateChart" class="btn btn-info archive-button"
+                    style="border-radius: 8px; font-weight: 600; padding: 8px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                    Refresh
+                </button>
+                <a href="api/archive/export?plugId=1" download style="text-decoration: none;">
+                    <button class="btn btn-info archive-button"
+                        style="border-radius: 8px; font-weight: 600; padding: 8px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        Export archive
+                    </button>
+                </a>
+                <button @click="deleteArchive" class="btn btn-danger archive-button"
+                    style="border-radius: 8px; font-weight: 600; padding: 8px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                    Delete archive
+                </button>
+            </div>
         </div>
-        <div class="form-floating mb-3">
-            <label for="toInput">to: </label>
-            <input type="datetime-local" step="1" class="form-control" id="toInput" :value="getDateString(state.to)"
-                @input="handleToInput" style="width:50%">
-        </div>
-        <button @click="updateChart">Refresh</button>
-        <button @click="deleteArchive">Delete archive</button>
-        <a href="api/archive/export?plugId=1" download><button>Export archive</button></a>
         <apexchart :options="options" :series="state.series" type="line" height="300" />
     </div>
 </template>

@@ -16,7 +16,7 @@ const state = reactive({
   </header>
 
   <main>
-    <button @click="()=>state.archive=!state.archive">Switch to {{state.archive ? "Dashboard" : "Archive" }}</button>
+    <button class="btn btn-primary mb-3" @click="()=>state.archive=!state.archive">Switch to {{state.archive ? "Dashboard" : "Archive" }}</button>
     <Shelly v-if="!state.archive"/>
     <Archive v-if="state.archive"/>
   </main>

@@ -83,26 +83,28 @@ watch(() => pricePerKwh, (newValue) => {
 </script>
 
 <template>
-    <div id="shelly" v-if="state.currentJson.counters">
-        <p>Current Power: {{ state.currentJson.power }} W</p>
-        <p>
-            Last measured Energy ({{ displayLastMeasuredDate() }}): {{ state.currentJson.counters[0] + " Wm or " }}
-            {{ round(state.currentJson.counters[0] / 60000, 6) }}
-            {{ " kWh" }}
-        </p>
-        <p>
-            Total Energy since plug in or restart: {{ state.currentJson.total }}
-            {{ " Wm or " }}
-            {{ round(state.currentJson.total / 60000, 3) }}
-            {{ " kWh" }}
-        </p>
-        <p>
-            Total Energy since refreshing the page: {{ round(state.energy, 3) + " Ws" }}
-        </p>
-        <p><input type="number" step="0.01" id="inputPricePerKwh" v-model.number="pricePerKwh"> Money
-            per kWh</p>
-        <p>Cost since Reload: {{ round(pricePerKwh * state.energy / 3600000, 6) }}</p>
-        <p>Cost since plug in: {{ round(pricePerKwh * state.currentJson.total / 60000, 2) }}</p>
-    </div>
-    <apexchart :options="options" :series="state.series" type="line" height="300" />
+  <div id="shelly" v-if="state.currentJson.counters">
+    <p><span class="fw-bold">Current Power: </span>{{ state.currentJson.power }} W</p>
+    <p>
+      <span class="fw-bold">Last measured Energy ({{ displayLastMeasuredDate() }}):
+      </span>{{ state.currentJson.counters[0] + " Wm or " }}
+      {{ round(state.currentJson.counters[0] / 60000, 6) }}
+      {{ " kWh" }}
+    </p>
+    <p>
+      <span class="fw-bold">Total Energy since plug in or restart: </span>{{ state.currentJson.total }}
+      {{ " Wm or " }}
+      {{ round(state.currentJson.total / 60000, 3) }}
+      {{ " kWh" }}
+    </p>
+    <p>
+      <span class="fw-bold">Total Energy since refreshing the page: </span>{{ round(state.energy, 3) + " Ws" }}
+    </p>
+    <p><input type="number" step="0.01" id="inputPricePerKwh" v-model.number="pricePerKwh"> <span class="fw-bold">Money
+        per kWh</span></p>
+    <p><span class="fw-bold">Cost since Reload: </span>{{ round(pricePerKwh * state.energy / 3600000, 6) }}</p>
+    <p><span class="fw-bold">Cost since plug in: </span>{{ round(pricePerKwh * state.currentJson.total / 60000, 2) }}
+    </p>
+  </div>
+  <apexchart :options="options" :series="state.series" type="line" height="300"/>
 </template>

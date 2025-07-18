@@ -1,5 +1,5 @@
 #! /bin/sh
-
+cd ..
 cargo build
 podman run --rm -v "$PWD":/usr/src/app -w /usr/src/app/frontend_vue node npm install
 podman run --rm -v "$PWD":/usr/src/app -w /usr/src/app/frontend_vue node npm run build
