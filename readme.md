@@ -4,6 +4,8 @@
 - Chart
 - Cost Calculation
 - optional energy archive
+<img width="552" height="776" alt="grafik" src="https://github.com/user-attachments/assets/97945c87-9e86-4f6e-b923-17f2fca2033a" />
+
 
 # Install (Linux)
 - requirement: podman or docker
