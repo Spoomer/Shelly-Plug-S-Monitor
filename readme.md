@@ -15,10 +15,11 @@
 
 
 # config.json
-
+- host = ip address where the webserver should run ( e.g. 127.0.0.1 or 0.0.0.0)
 - port = desired port for webapp
 - archive = size for archive in kB (`null` for no archive and `0` for unlimited size)
 - authentication = [basic authentication](https://de.wikipedia.org/wiki/HTTP-Authentifizierung#Basic_Authentication) for Shelly Plug S, if enabled (`null` if disabled)
+- shellyApiUrl = address of shelly plug s
 
 
 # Cross-Compile to raspberry pi zero
