@@ -4,6 +4,14 @@
 - Chart
 - Cost Calculation
 - optional energy archive
+
+# Install (Linux)
+- requirement: podman or docker
+- clone repository
+- run deploy_local.sh in Linux or deploy_local.bat in windows
+- you will find a release folder in the root folder
+
+
 # config.json
 
 - port = desired port for webapp
@@ -12,8 +20,11 @@
 
 
 # Cross-Compile to raspberry pi zero
-
+## Install rust
+https://www.rust-lang.org/learn/get-started
 ## Install cross
 `cargo install cross --git https://github.com/cross-rs/cross`
 ## Cross-Compile
 `cross build --release --target arm-unknown-linux-gnueabihf`
+
+...or use deploy_to_zip.sh
