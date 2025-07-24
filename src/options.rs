@@ -41,7 +41,7 @@ impl Clone for RunOptions {
 
 pub fn get_run_options() -> RunOptions {
     let mut options: RunOptions = RunOptions {
-        port: 8080,
+        port: 80,
         archive: None,
         authentication: None,
         shelly_api_url: None,
@@ -51,14 +51,24 @@ pub fn get_run_options() -> RunOptions {
         options = config;
     }
 
+    //Env overrides config file
+    if let Ok(archive) = env::var("ARCHIVE") {
+        options.add_archive(Some(archive));
+    }
+    if let Ok(auth) = env::var("AUTH") {
+        options.authentication = Some(auth);
+    }
+    if let Ok(shelly_api_url) = env::var("SHELLY_API_URL") {
+        options.shelly_api_url = Some(shelly_api_url);
+    }
+    if let Ok(host) = env::var("HOST") {
+        options.host = Some(host);
+    }
+
     let mut args = env::args();
     //ignore first argument: executable name
     args.next();
 
-    //Env
-    if let Ok(auth) = env::var("AUTH") {
-        options.authentication = Some(auth);
-    }
     // args overwrite Env
     while let Some(arg) = args.next() {
         if arg == "--port" || arg == "-p" {

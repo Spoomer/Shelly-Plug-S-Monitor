@@ -1,0 +1,7 @@
+/target
+/wwwroot
+/Buildtools
+/.vscode
+
+/.secret
+/archive.db
